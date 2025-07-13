@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Debug Page</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+</head>
+<body>
+<h1>Debug Page Loaded</h1>
+<div id="status"></div>
+
+<script>
+  const ALLOWED = ["jhunjhunwalavaibhav20@gmail.com", "yeshwinijhunjhunwala6@gmail.com"];
+  let currentUser = null;
+
+  function log(msg) {
+    console.log(msg);
+    const el = document.getElementById('status');
+    el.innerHTML += msg + "<br>";
+  }
+
+  window.handleCredentialResponse = (resp) => {
+    log("handleCredentialResponse triggered");
+    try {
+      const data = jwt_decode(resp.credential);
+      log("JWT decoded: " + JSON.stringify(data));
+      if (!ALLOWED.includes(data.email)) {
+        alert("Access denied for " + data.email);
+        return;
+      }
+      currentUser = data;
+      log("Access granted to: " + data.email);
+    } catch(e) {
+      log("Error decoding JWT: " + e.message);
+    }
+  };
+
+  window.onload = () => {
+    log("Page loaded");
+    const token = localStorage.getItem('user');
+    if (token) {
+      try {
+        const data = jwt_decode(token);
+        log("Token exists for user: " + data.email);
+        if (ALLOWED.includes(data.email)) {
+          currentUser = data;
+          log("Access granted by stored token");
+        } else {
+          log("Stored token user not allowed");
+        }
+      } catch(e) {
+        log("Stored token invalid: " + e.message);
+      }
+    } else {
+      log("No stored token found");
+    }
+
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="g_id_onload"
+        data-client_id="713465174342-os4tobo59qmtlftia6u7htd0hkc7l1l7.apps.googleusercontent.com"
+        data-callback="handleCredentialResponse"
+        data-auto_prompt="false"></div>
+      <div class="g_id_signin" data-type="standard"></div>
+    `);
+  };
+</script>
+</body>
+</html>
