@@ -48,6 +48,7 @@
 
     window.handleCredentialResponse = (resp) => {
       const data = jwt_decode(resp.credential);
+      console.log("Logged in as:", data.email);
       if (!ALLOWED.includes(data.email)) {
         alert("Access denied");
         loginUI();
