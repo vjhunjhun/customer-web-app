@@ -32,18 +32,24 @@
       text-align: left;
     }
     .g_id_signin {
-  display: inline-block;
-  width: 240px; /* or auto */
-  height: 40px; /* typical button height */
-  min-height: 40px;
-  overflow: visible;
-  margin: 10px 0;
-}
+      display: inline-block;
+      width: 240px;
+      height: 40px;
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
-  <div id="login-container"></div>
+  <!-- Login container with static Google sign-in divs -->
+  <div id="login-container">
+    <div id="g_id_onload"
+         data-client_id="713465174342-os4tobo59qmtlftia6u7htd0hkc7l1l7.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse"
+         data-auto_prompt="false"></div>
+    <div class="g_id_signin" data-type="standard"></div>
+  </div>
 
+  <!-- Main app container, hidden by default -->
   <div id="app" style="display: none;">
     <h2>Welcome, <span id="user-name"></span>!</h2>
 
@@ -68,35 +74,8 @@
   </div>
 
   <script>
-console.log("Script started");
+    console.log("Script started");
 
-window.onload = () => {
-  console.log("Window loaded");
-  const token = localStorage.getItem("user");
-  console.log("Token from localStorage:", token);
-  if (token) {
-    try {
-      const data = jwt_decode(token);
-      console.log("Decoded token:", data);
-      if (ALLOWED.includes(data.email)) {
-        currentUser = data;
-        console.log("User allowed:", data.email);
-        showApp();
-      } else {
-        console.log("User not allowed");
-        loginUI();
-      }
-    } catch (e) {
-      console.error("Token decode error:", e);
-      loginUI();
-    }
-  } else {
-    console.log("No token found");
-    loginUI();
-  }
-};
-
-    
     const SHEET_URL =
       "https://script.google.com/macros/s/AKfycbxAOsoQNzcntOp5yTxJNu235QcnEBBChz_HTn-m-omV5VePsZxncrhWZvBBKpPHyxPfJg/exec";
     const ALLOWED = ["jhunjhunwalavaibhav20@gmail.com", "yeshwinijhunjhunwala6@gmail.com"];
@@ -124,22 +103,16 @@ window.onload = () => {
     function loginUI() {
       console.log("Showing login UI");
       document.getElementById("app").style.display = "none";
-      document.getElementById("login-container").innerHTML = `
-        <div id="g_id_onload"
-          data-client_id="713465174342-os4tobo59qmtlftia6u7htd0hkc7l1l7.apps.googleusercontent.com"
-          data-callback="handleCredentialResponse"
-          data-auto_prompt="false"></div>
-        <div class="g_id_signin" data-type="standard"></div>
-      `;
+      document.getElementById("login-container").style.display = "block";
     }
 
     function showApp() {
-        console.log("Showing app for user:", currentUser);
-      document.getElementById("login-container").innerHTML = "";
+      console.log("Showing app for user:", currentUser);
+      document.getElementById("login-container").style.display = "none";
       document.getElementById("user-name").textContent = currentUser.name;
       document.getElementById("app").style.display = "block";
 
-      // Setup form submit handler here, only after form is visible
+      // Setup form submit handler
       document.getElementById("customerForm").onsubmit = async function (e) {
         e.preventDefault();
         const form = new FormData(this);
@@ -256,20 +229,27 @@ window.onload = () => {
     }
 
     window.onload = () => {
+      console.log("Window loaded");
       const token = localStorage.getItem("user");
+      console.log("Token from localStorage:", token);
       if (token) {
         try {
           const data = jwt_decode(token);
+          console.log("Decoded token:", data);
           if (ALLOWED.includes(data.email)) {
             currentUser = data;
+            console.log("User allowed:", data.email);
             showApp();
           } else {
+            console.log("User not allowed");
             loginUI();
           }
-        } catch {
+        } catch (e) {
+          console.error("Token decode error:", e);
           loginUI();
         }
       } else {
+        console.log("No token found");
         loginUI();
       }
     };
