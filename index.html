@@ -150,10 +150,10 @@
     }
 
     async function loadSheet() {
-      const res = await fetch(SHEET_URL);
-      if (!res.ok) throw new Error("Failed to load sheet");
-      return await res.json();
-    }
+  const res = await fetch(SHEET_URL + "?email=" + encodeURIComponent(currentUser.email));
+  if (!res.ok) throw new Error("Failed to load sheet");
+  return await res.json();
+}
 
     async function loadEvents(offset) {
       try {
