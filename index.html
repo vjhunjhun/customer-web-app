@@ -1,43 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8">
   <title>Customer Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="google-signin-client_id" content="713465174342-os4tobo59qmtlftia6u7htd0hkc7l1l7.apps.googleusercontent.com" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="google-signin-client_id" content="713465174342-os4tobo59qmtlftia6u7htd0hkc7l1l7.apps.googleusercontent.com">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/jwt-decode/build/jwt-decode.min.js"></script>
+  <link rel="icon" href="data:,"> <!-- Prevent favicon error -->
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 20px auto; }
-    input, button { width: 100%; padding: 8px; margin: 5px 0; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    button.small { width: auto; padding: 4px 8px; margin: 0 4px; }
+    body { font-family: sans-serif; max-width: 600px; margin:20px auto; }
+    input, button { width: 100%; padding:8px; margin:5px 0; }
+    table { width:100%; border-collapse: collapse; margin-top:10px; }
+    th, td { border:1px solid #ccc; padding:8px; text-align:left; }
   </style>
 </head>
 <body>
   <div id="login-container"></div>
-
   <div id="app" style="display:none;">
     <h2>Welcome, <span id="user-name"></span>!</h2>
-    <h3>Add / Edit Customer</h3>
+    <h3>Add Customer</h3>
     <form id="customerForm">
-      <input name="name" placeholder="Name *" required />
-      <input name="contact" placeholder="Contact" />
-      <input type="email" name="email" placeholder="Email *" required />
-      <input type="date" name="birthday" />
-      <input type="date" name="anniversary" />
+      <input name="name" placeholder="Name *" required>
+      <input name="contact" placeholder="Contact">
+      <input type="email" name="email" placeholder="Email *" required>
+      <input type="date" name="birthday">
+      <input type="date" name="anniversary">
       <button type="submit">Submit</button>
     </form>
-
     <div style="margin-top:20px;">
       <button onclick="loadEvents(0)">🎉 Today's Events</button>
       <button onclick="loadEvents(1)">📅 Tomorrow's Events</button>
       <button onclick="loadAll()">📊 Full Database</button>
     </div>
-
     <div id="output"></div>
-
     <button onclick="logout()">Logout</button>
   </div>
 
@@ -48,7 +44,7 @@
 
     window.handleCredentialResponse = (resp) => {
       const data = jwt_decode(resp.credential);
-      console.log("Logged in as:", data.email);
+      console.log("JWT decoded:", data); // ✅ helps you debug if login fails
       if (!ALLOWED.includes(data.email)) {
         alert("Access denied");
         loginUI();
@@ -61,53 +57,50 @@
 
     function loginUI() {
       document.getElementById('app').style.display = 'none';
-      document.getElementById('login-container').innerHTML = `
-        <div id="g_id_onload"
-          data-client_id="713465174342-os4tobo59qmtlftia6u7htd0hkc7l1l7.apps.googleusercontent.com"
-          data-callback="handleCredentialResponse"
-          data-auto_prompt="false"></div>
-        <div class="g_id_signin" data-type="standard"></div>
-      `;
+      document.getElementById('login-container').innerHTML =
+        `<div id="g_id_onload"
+              data-client_id="713465174342-os4tobo59qmtlftia6u7htd0hkc7l1l7.apps.googleusercontent.com"
+              data-callback="handleCredentialResponse"
+              data-auto_prompt="false"></div>
+         <div class="g_id_signin" data-type="standard"></div>`;
     }
 
     function showApp() {
       document.getElementById('login-container').innerHTML = '';
       document.getElementById('user-name').textContent = currentUser.name;
       document.getElementById('app').style.display = 'block';
-      loadAll();
+
+      // ✅ Moved here so it only runs when form is visible
+      document.getElementById('customerForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const form = new FormData(this);
+        const body = Object.fromEntries(form.entries());
+        body.email = currentUser.email;
+        if (this.dataset.editRow) {
+          body.action = "edit";
+          body.row = this.dataset.editRow;
+        } else {
+          body.action = "add";
+        }
+        await fetch(SHEET_URL, {
+          method: 'POST',
+          body: JSON.stringify(body),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        this.reset();
+        this.removeAttribute('data-edit-row');
+        document.querySelector('#customerForm button').textContent = "Submit";
+        alert("Success!");
+        loadAll();
+      };
+
+      loadAll(); // Load data on login
     }
 
     function logout() {
       localStorage.removeItem('user');
       location.reload();
     }
-
-    document.getElementById('customerForm').onsubmit = async function (e) {
-      e.preventDefault();
-      const form = new FormData(this);
-      const body = Object.fromEntries(form.entries());
-      body.email = currentUser.email;
-      if (this.dataset.editRow) {
-        body.action = "edit";
-        body.row = this.dataset.editRow;
-      } else {
-        body.action = "add";
-      }
-      try {
-        await fetch(SHEET_URL, {
-          method: 'POST',
-          body: JSON.stringify(body),
-          headers: { 'Content-Type': 'application/json' }
-        });
-        alert("Success!");
-        this.reset();
-        this.removeAttribute('data-edit-row');
-        this.querySelector('button').textContent = "Submit";
-        loadAll();
-      } catch (err) {
-        alert("Error: " + err.message);
-      }
-    };
 
     async function loadSheet() {
       const res = await fetch(SHEET_URL);
@@ -137,24 +130,20 @@
 
     function display(rows, title) {
       const out = document.getElementById('output');
-      if (!rows.length) {
-        out.innerHTML = `<h3>${title}</h3><p>No records.</p>`;
-        return;
-      }
-      let html = `<h3>${title}</h3><table><thead><tr>
-        <th>Name</th><th>Contact</th><th>Email</th><th>Birthday</th><th>Anniversary</th><th>Actions</th>
-        </tr></thead><tbody>`;
+      if (!rows.length) return out.innerHTML = `<h3>${title}</h3><p>No records.</p>`;
+      let html = `<h3>${title}</h3><table><tr>
+          <th>Name</th><th>Contact</th><th>Email</th><th>Birthday</th><th>Anniversary</th><th>Actions</th></tr>`;
       rows.forEach((r, i) => {
-        const rowNum = i + 2; // Sheet rows start at 2 because of header
+        const rowNum = i + 2;
         html += `<tr>
           ${r.slice(0, 5).map(c => `<td>${c || ''}</td>`).join('')}
           <td>
-            <button class="small" onclick="editRow(${rowNum}, ${JSON.stringify(r.slice(0,5)).replace(/"/g, '&quot;')})">Edit</button>
-            <button class="small" onclick="deleteRow(${rowNum})">Delete</button>
+            <button onclick="editRow(${rowNum}, ${JSON.stringify(r.slice(0,5)).replace(/"/g, '&quot;')})">Edit</button>
+            <button onclick="deleteRow(${rowNum})">Delete</button>
           </td>
         </tr>`;
       });
-      html += `</tbody></table>`;
+      html += `</table>`;
       out.innerHTML = html;
     }
 
@@ -167,7 +156,7 @@
       }).then(() => {
         alert("Deleted");
         loadAll();
-      }).catch(err => alert("Error deleting: " + err.message));
+      });
     }
 
     function editRow(row, data) {
@@ -178,23 +167,21 @@
       form.birthday.value = data[3];
       form.anniversary.value = data[4];
       form.dataset.editRow = row;
-      form.querySelector('button').textContent = "Update Customer";
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.querySelector('#customerForm button').textContent = "Update Customer";
     }
 
     window.onload = () => {
       const token = localStorage.getItem('user');
       if (token) {
         const data = jwt_decode(token);
+        console.log("Token found. User:", data.email);
         if (ALLOWED.includes(data.email)) {
           currentUser = data;
           showApp();
         } else {
           loginUI();
         }
-      } else {
-        loginUI();
-      }
+      } else loginUI();
     };
   </script>
 </body>
